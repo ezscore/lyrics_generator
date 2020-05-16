@@ -59,6 +59,7 @@ def get_song_id(artist_id):
 
         else:
             # If page_songs is empty, quit
+            print('Collected lyrics for all songs')
             next_page = False
     return songs
 
