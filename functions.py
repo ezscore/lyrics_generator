@@ -1,6 +1,21 @@
 import config
 import requests
 from bs4 import BeautifulSoup
+from wordcloud import WordCloud
+
+def lyr_to_df(dic, name): #lyrics to dataframe
+    titles = []
+    lyrics = []
+    df = pd.DataFrame()
+    for item in dic:
+        for k,v in item.items():
+            titles.append(k)
+            lyrics.append(v)
+    df['artist'] = [name] * len(titles)
+    df['titles'] = titles
+    df['lyrics'] = lyrics
+
+    return df
 
 def get_json(path, params=None, headers=None):
     '''Send request and get response in json format.'''
@@ -89,3 +104,46 @@ def retrieve_lyrics(song_id):
 
     s_dict[title] = lyrics
     return s_dict
+
+#RUN FUNCTION (MASTER) retrieve lyrics for artist and enter all lyrics and titles to dataframe
+def productionize(name):
+    song_lyrics = []
+
+    artist = functions.request_artist(name)
+    artist_id = functions.get_artist_id(artist)
+    songs = functions.get_song_id(artist_id)
+
+    songs = [song["id"] for song in songs
+        if song["primary_artist"]["id"] == artist_id]
+
+    for song in songs:
+        song_lyrics.append(functions.retrieve_lyrics(song))
+
+    print('Colleted all lyrics for {}'.format(name))
+    return functions.lyr_to_df(song_lyrics, name)
+
+#-----------------NLP FUNCTIONS-------------------#
+
+#function that adds stopwords and tokenizes lyrics
+def clean_tokenize_lyrics(song):
+    stopwords_list = stopwords.words('english')
+    stopwords_list += ["''", '""', '...', '``']
+    stopwords_list += ['got', 'na', 'like', 'oh', 'ca', 'cause',\
+                       'cause', 'want', 'ai', 'ya', 'yeah', 'let',\
+                      'wanna', 'gotta', 'kinda', 'say', 'no', 'see',\
+                      'que', 'la', 'gon', 'go', 'got', 'wan', 'uh', 'huh']
+    word_list = []
+    tokenized_lyrics = word_tokenize(song)
+     #remove all tokens that are not alphabetic and stopwords
+    words = [word for word in tokenized_lyrics if word not in stopwords_list and word.isalpha()]
+    for word in words:
+        word_list.append(word)
+    return word_list
+
+def word_cloud(words, name):
+    wc = WordCloud(max_words=25, max_font_size=50).generate(words)
+    plt.figure(figsize=(20,20))
+    plt.title('WordCloud of most used words for {}'.format(name),fontsize=45)
+    plt.imshow(wc, interpolation='bilinear')
+    plt.axis("off")
+    plt.show()
